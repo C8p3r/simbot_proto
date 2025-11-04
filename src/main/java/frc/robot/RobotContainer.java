@@ -8,6 +8,15 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 // Import IO interfaces
 import frc.robot.io.GyroIO;
 import frc.robot.io.SwerveModuleIO;
+import frc.robot.io.VisionIO; // <-- ADD THIS
+
+// Import Subsystems
+import frc.robot.subsystems.Drivetrain; // <-- This will now be in subsystems package
+import frc.robot.subsystems.SwerveModule; // <-- This will now be in subsystems package
+import frc.robot.subsystems.Vision; // <-- ADD THIS
+
+// Import commands
+import frc.robot.commands.DriveCommand; // <-- This will now be in commands package
 
 // Import constants
 import static frc.robot.Constants.OIConstants.*;
@@ -20,6 +29,7 @@ public class RobotContainer {
     
     // --- Subsystems ---
     private final Drivetrain m_drivetrain;
+    private final Vision m_vision; // <-- ADD THIS
 
     // --- Controllers ---
     private final XboxController m_driverController = new XboxController(kDriverControllerPort);
@@ -31,8 +41,9 @@ public class RobotContainer {
      * @param frIO The Front Right Swerve Module IO implementation.
      * @param rlIO The Rear Left Swerve Module IO implementation.
      * @param rrIO The Rear Right Swerve Module IO implementation.
+     * @param visionIO The Vision IO implementation. <-- ADD THIS
      */
-    public RobotContainer(GyroIO gyroIO, SwerveModuleIO flIO, SwerveModuleIO frIO, SwerveModuleIO rlIO, SwerveModuleIO rrIO) {
+    public RobotContainer(GyroIO gyroIO, SwerveModuleIO flIO, SwerveModuleIO frIO, SwerveModuleIO rlIO, SwerveModuleIO rrIO, VisionIO visionIO) { // <-- ADD visionIO
         
         // --- Instantiate Subsystems ---
         
@@ -42,8 +53,11 @@ public class RobotContainer {
         SwerveModule rearLeft = new SwerveModule(rlIO, "RearLeft");
         SwerveModule rearRight = new SwerveModule(rrIO, "RearRight");
 
+        // Instantiate Vision subsystem
+        m_vision = new Vision(visionIO); // <-- ADD THIS
+
         // Create the Drivetrain subsystem (which takes the Gyro and SwerveModules as dependencies)
-        m_drivetrain = new Drivetrain(gyroIO, frontLeft, frontRight, rearLeft, rearRight);
+        m_drivetrain = new Drivetrain(gyroIO, frontLeft, frontRight, rearLeft, rearRight, m_vision); // <-- PASS m_vision
         
         // --- Configure Default Commands ---
         

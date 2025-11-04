@@ -1,4 +1,4 @@
-package frc.robot;
+package frc.robot.subsystems;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -34,9 +34,11 @@ import frc.robot.io.Pigeon2IOSim;
 
 import static frc.robot.Constants.DriveConstants.*;
 
+import frc.robot.subsystems.Vision.VisionMeasurement; // <-- ADD THIS
+
 /**
  * The Drivetrain subsystem manages the swerve drive, odometry, and gyro.
- * It now also includes advanced, structured telemetry publishing.
+ * It now also includes advanced, structured telemetry publishing and vision-based pose estimation.
  */
 public class Drivetrain extends SubsystemBase {
 
@@ -95,16 +97,18 @@ public class Drivetrain extends SubsystemBase {
     };
     // --- END TELEMETRY PUBLISHERS ---
 
+    private final Vision m_vision;
 
     /**
      * Creates a new Drivetrain subsystem.
      */
-    public Drivetrain(GyroIO gyroIO, SwerveModule frontLeft, SwerveModule frontRight, SwerveModule rearLeft, SwerveModule rearRight) {
+    public Drivetrain(GyroIO gyroIO, SwerveModule frontLeft, SwerveModule frontRight, SwerveModule rearLeft, SwerveModule rearRight, Vision vision) {
         this.m_gyroIO = gyroIO;
         this.m_frontLeft = frontLeft;
         this.m_frontRight = frontRight;
         this.m_rearLeft = rearLeft;
         this.m_rearRight = rearRight;
+        this.m_vision = vision;
 
         // Initialize Odometry
         m_odometry = new SwerveDriveOdometry(
@@ -142,6 +146,16 @@ public class Drivetrain extends SubsystemBase {
         // Update odometry
         SwerveModulePosition[] modulePositions = getModulePositions();
         m_odometry.update(getRotation(), modulePositions);
+
+        // Vision fusion
+        VisionMeasurement measurement = m_vision.getVisionMeasurement();
+        if (measurement != null && measurement.ambiguity() < 0.2) {
+            m_odometry.addVisionMeasurement(
+                measurement.pose().toPose2d(),
+                measurement.timestamp()
+            );
+            Logger.recordOutput("Drive/VisionPose", measurement.pose().toPose2d());
+        }
 
         // --- REMOVED OLD LOGGING ---
         // AdvantageKit's logger still runs, but we'll use the
@@ -311,4 +325,3 @@ public class Drivetrain extends SubsystemBase {
         m_rearRight.simulationPeriodic(dt);
     }
 }
-

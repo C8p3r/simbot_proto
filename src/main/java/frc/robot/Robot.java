@@ -18,6 +18,10 @@ import frc.robot.io.SwerveModuleIO;
 import frc.robot.io.SwerveModuleIOSim;
 import frc.robot.io.SwerveModuleIOTalonFX;
 
+import frc.robot.io.VisionIO;
+import frc.robot.io.VisionIOPhotonVision;
+import frc.robot.io.VisionIOSim;
+
 /**
  * The main Robot class, which extends AdvantageKit's LoggedRobot.
  * This class handles the initialization of AdvantageKit and the selection
@@ -33,40 +37,35 @@ public class Robot extends LoggedRobot {
         super(0.02);
     }
 
-    /**
+/**
      * This function is run when the robot is first started up.
      */
     @Override
     public void robotInit() {
         // --- AdvantageKit Logger Initialization ---
-        // FIX: Removed .getInstance() from all Logger calls
+        // (This part remains the same)
         Logger.recordMetadata("ProjectName", "SwerveDriveAK");
         
         if (isReal() && Constants.LOG_TO_RERUN) {
-            // If on real robot, log to a file on the Rio
             Logger.addDataReceiver(new WPILOGWriter("/home/lvuser/logs"));
-            Logger.addDataReceiver(new NT4Publisher()); // Publish to NetworkTables
+            Logger.addDataReceiver(new NT4Publisher());
         } else if (isSimulation()) {
-            // If in simulation, publish to NetworkTables
             Logger.addDataReceiver(new NT4Publisher());
         }
-
-        // --- Log Replay ---
         if (Constants.REPLAY_LOGS) {
             String path = LogFileUtil.findReplayLog();
             Logger.setReplaySource(new WPILOGReader(path));
             Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(path, "_sim")));
         }
-        
         Logger.start(); // Start logging!
 
         // --- IO Implementation Selection ---
-        // Create the IO objects based on whether we are in simulation or on the real robot
         final GyroIO gyroIO;
         final SwerveModuleIO flModuleIO;
         final SwerveModuleIO frModuleIO;
         final SwerveModuleIO rlModuleIO;
         final SwerveModuleIO rrModuleIO;
+        final VisionIO visionIO; // <-- ADD THIS
 
         if (RobotBase.isReal()) {
             // Real robot IO
@@ -75,6 +74,9 @@ public class Robot extends LoggedRobot {
             frModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kFrontRightDriveCanId, Constants.DriveConstants.kFrontRightSteerCanId);
             rlModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kRearLeftDriveCanId, Constants.DriveConstants.kRearLeftSteerCanId);
             rrModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kRearRightDriveCanId, Constants.DriveConstants.kRearRightSteerCanId);
+
+            visionIO = new VisionIOPhotonVision(); // <-- ADD THIS
+
         } else {
             // Simulation IO
             gyroIO = new Pigeon2IOSim();
@@ -82,11 +84,13 @@ public class Robot extends LoggedRobot {
             frModuleIO = new SwerveModuleIOSim();
             rlModuleIO = new SwerveModuleIOSim();
             rrModuleIO = new SwerveModuleIOSim();
+
+            visionIO = new VisionIOSim(); // <-- ADD THIS
         }
 
         // --- THIS IS THE CORRECT INITIALIZATION ---
         // Instantiate RobotContainer. This must be done AFTER IO selection.
-        m_robotContainer = new RobotContainer(gyroIO, flModuleIO, frModuleIO, rlModuleIO, rrModuleIO);
+        m_robotContainer = new RobotContainer(gyroIO, flModuleIO, frModuleIO, rlModuleIO, rrModuleIO, visionIO); // <-- PASS visionIO
     }
 
     @Override
