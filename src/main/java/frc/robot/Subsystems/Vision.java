@@ -1,11 +1,10 @@
 package frc.robot.subsystems;
 
 import java.io.IOException;
-
 import org.littletonrobotics.junction.Logger;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.io.VisionIO;
@@ -18,6 +17,9 @@ public class Vision extends SubsystemBase {
 
     private AprilTagFieldLayout fieldLayout;
     private boolean isLayoutLoaded = false;
+
+    /** Simple record class to store a single vision pose measurement. */
+    public static record VisionMeasurement(Pose3d pose, double timestamp, double ambiguity) {}
 
     public Vision(VisionIO io) {
         System.out.println("[Init] Creating Vision Subsystem");
@@ -41,26 +43,41 @@ public class Vision extends SubsystemBase {
     public void periodic() {
         io.updateInputs(inputs);
         Logger.processInputs("Vision", inputs);
+
+        // Log the estimated pose to AdvantageScope's 3D Field
+        if (isLayoutLoaded && inputs.hasTargets && inputs.observationPoses.length > 0) {
+            Logger.recordOutput("Vision/EstimatedPose", inputs.observationPoses[0].toPose2d());
+        }
     }
 
     /**
-     * Returns the latest vision-derived robot pose estimate.
-     * @return The estimated pose (Pose3d) and the timestamp (in seconds).
+     * Returns the latest valid vision-derived robot pose estimates.
+     * @return An array of vision measurements, or an empty array if no valid measurements.
      */
-    public VisionMeasurement getVisionMeasurement() {
-        if (!isLayoutLoaded || inputs.observationPoses.length == 0) {
-            return null; // No valid measurement
+    public VisionMeasurement[] getVisionMeasurements() {
+        if (!isLayoutLoaded || !inputs.hasTargets || inputs.observationPoses.length == 0) {
+            return new VisionMeasurement[0]; // No valid measurement
         }
 
-        // For now, just return the first observation
-        // We could add logic here to filter for low ambiguity
-        return new VisionMeasurement(
-            inputs.observationPoses[0], 
-            inputs.observationTimestamps[0],
-            inputs.observationAmbiguities[0]
-        );
+        VisionMeasurement[] measurements = new VisionMeasurement[inputs.observationPoses.length];
+        for (int i = 0; i < inputs.observationPoses.length; i++) {
+            measurements[i] = new VisionMeasurement(
+                inputs.observationPoses[i], 
+                inputs.observationTimestamps[i],
+                inputs.observationAmbiguities[i]
+            );
+        }
+        return measurements;
     }
 
-    /** Simple record class to store a single vision pose measurement. */
-    public static record VisionMeasurement(Pose3d pose, double timestamp, double ambiguity) {}
+    /**
+     * Returns the 2D pose of the robot based on the first (and likely only)
+     * vision measurement. Returns null if no targets are visible.
+     */
+    public Pose2d getEstimated2DPose() {
+        if (isLayoutLoaded && inputs.hasTargets && inputs.observationPoses.length > 0) {
+            return inputs.observationPoses[0].toPose2d();
+        }
+        return null;
+    }
 }

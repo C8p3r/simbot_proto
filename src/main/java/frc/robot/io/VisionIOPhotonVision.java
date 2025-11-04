@@ -2,11 +2,9 @@ package frc.robot.io;
 
 import java.util.ArrayList;
 import java.util.Optional;
-
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose3d;
 import frc.robot.VisionConstants;
@@ -19,10 +17,8 @@ public class VisionIOPhotonVision implements VisionIO {
     public VisionIOPhotonVision() {
         System.out.println("[Init] Creating VisionIOPhotonVision");
         camera = new PhotonCamera(VisionConstants.kFrontCameraName);
-
-        // We can't create the pose estimator yet, because we need the AprilTag layout,
-        // which is loaded asynchronously in the Vision subsystem.
-        // We will create it when setFieldLayout() is called.
+        
+        // Pose estimator will be created once the field layout is set
         poseEstimator = null;
     }
 
@@ -31,47 +27,49 @@ public class VisionIOPhotonVision implements VisionIO {
         if (layout != null) {
             poseEstimator = new PhotonPoseEstimator(
                 layout, 
-                PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, // Recommended strategy
+                PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, // This is a good default
                 camera, 
                 VisionConstants.kRobotToFrontCam
             );
         } else {
-            poseEstimator = null; // Disable if layout is null
+            poseEstimator = null;
         }
     }
 
     @Override
     public void updateInputs(VisionIOInputs inputs) {
-        if (poseEstimator == null) {
+        // Get the latest result from the camera
+        var result = camera.getLatestResult();
+        inputs.hasTargets = result.hasTargets();
+        
+        // If we have no targets, or if the pose estimator hasn't been initialized, return early
+        if (!inputs.hasTargets || poseEstimator == null) {
             inputs.observationPoses = new Pose3d[] {};
             inputs.observationTimestamps = new double[] {};
             inputs.observationAmbiguities = new double[] {};
             return;
         }
 
-        var result = camera.getLatestResult();
+        // Get the estimated robot pose
+        Optional<PhotonPoseEstimator.EstimatedPose> estimatedPose = poseEstimator.update();
         
-        // Get all estimated robot poses from the camera
-        ArrayList<Pose3d> poses = new ArrayList<>();
-        ArrayList<Double> timestamps = new ArrayList<>();
-        ArrayList<Double> ambiguities = new ArrayList<>();
-
-        if (result.hasTargets()) {
-            // Get the robot's pose relative to the field
-            Optional<PhotonPoseEstimator.EstimatedPose> estimatedPose = poseEstimator.update(result);
+        if (estimatedPose.isPresent()) {
+            // Valid pose found
+            inputs.observationPoses = new Pose3d[] { estimatedPose.get().estimatedPose };
+            inputs.observationTimestamps = new double[] { estimatedPose.get().timestampSeconds };
             
-            if (estimatedPose.isPresent()) {
-                poses.add(estimatedPose.get().estimatedPose);
-                timestamps.add(estimatedPose.get().timestampSeconds);
-                
-                // Get ambiguity of the *best* target used for this pose
-                ambiguities.add(result.getBestTarget().getPoseAmbiguity());
+            // Get ambiguity of the *best* target used for this pose
+            double bestAmbiguity = 9999.0;
+            if (result.getBestTarget() != null) {
+                bestAmbiguity = result.getBestTarget().getPoseAmbiguity();
             }
+            inputs.observationAmbiguities = new double[] { bestAmbiguity };
+
+        } else {
+            // No pose calculated
+            inputs.observationPoses = new Pose3d[] {};
+            inputs.observationTimestamps = new double[] {};
+            inputs.observationAmbiguities = new double[] {};
         }
-        
-        // Convert ArrayLists to arrays for logging
-        inputs.observationPoses = poses.toArray(new Pose3d[poses.size()]);
-        inputs.observationTimestamps = timestamps.stream().mapToDouble(d -> d).toArray();
-        inputs.observationAmbiguities = ambiguities.stream().mapToDouble(d -> d).toArray();
     }
 }
