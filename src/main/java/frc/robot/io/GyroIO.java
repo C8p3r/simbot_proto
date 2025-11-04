@@ -1,7 +1,7 @@
 package frc.robot.io;
 
 import org.littletonrobotics.junction.AutoLog;
-import org.littletonrobotics.junction.inputs.*;; // ADDED: Required import
+import org.littletonrobotics.junction.inputs.LoggableInputs; // CLEANUP: Removed wildcard
 
 /**
  * An interface for the Gyro, enabling AdvantageKit logging and simulation.
@@ -38,4 +38,3 @@ public interface GyroIO {
     /** Sets the current yaw angle of the gyro (used for zeroing). */
     public default void setYaw(double yawDeg) {}
 }
-

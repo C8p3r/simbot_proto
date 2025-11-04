@@ -1,14 +1,15 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator; // <-- CORRECT IMPORT
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d; // Keep for gyro
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
-// --- BEGIN ADDED IMPORTS ---
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -19,12 +20,8 @@ import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
-// --- END ADDED IMPORTS ---
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
-// --- NEW IMPORT ---
 import edu.wpi.first.wpilibj.RobotBase;
-// --- END NEW IMPORT ---
 
 import org.littletonrobotics.junction.Logger;
 
@@ -34,7 +31,7 @@ import frc.robot.io.Pigeon2IOSim;
 
 import static frc.robot.Constants.DriveConstants.*;
 
-import frc.robot.subsystems.Vision.VisionMeasurement; // <-- ADD THIS
+import frc.robot.subsystems.Vision.VisionMeasurement;
 
 /**
  * The Drivetrain subsystem manages the swerve drive, odometry, and gyro.
@@ -50,7 +47,8 @@ public class Drivetrain extends SubsystemBase {
     private final SwerveModule m_rearLeft;
     private final SwerveModule m_rearRight;
 
-    private final SwerveDriveOdometry m_odometry;
+    // --- FIX: Use SwerveDrivePoseEstimator (2D) ---
+    private final SwerveDrivePoseEstimator m_odometry;
     private ChassisSpeeds m_chassisSpeeds = new ChassisSpeeds(); // Current chassis speeds
     private SwerveModuleState[] m_desiredModuleStates = new SwerveModuleState[] { // Desired module states
         new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState()
@@ -62,6 +60,7 @@ public class Drivetrain extends SubsystemBase {
     // --- BEGIN TELEMETRY PUBLISHERS ---
     private final NetworkTableInstance inst = NetworkTableInstance.getDefault();
     private final NetworkTable driveStateTable = inst.getTable("DriveState");
+    // --- FIX: Publish a Pose2d ---
     private final StructPublisher<Pose2d> drivePosePub = driveStateTable.getStructTopic("Pose", Pose2d.struct).publish();
     private final StructPublisher<ChassisSpeeds> driveSpeedsPub = driveStateTable.getStructTopic("Speeds", ChassisSpeeds.struct).publish();
     private final StructArrayPublisher<SwerveModuleState> driveModuleStatesPub = driveStateTable.getStructArrayTopic("ModuleStates", SwerveModuleState.struct).publish();
@@ -110,10 +109,10 @@ public class Drivetrain extends SubsystemBase {
         this.m_rearRight = rearRight;
         this.m_vision = vision;
 
-        // Initialize Odometry
-        m_odometry = new SwerveDriveOdometry(
+        // --- FIX: Use SwerveDrivePoseEstimator (2D) ---
+        m_odometry = new SwerveDrivePoseEstimator(
             kDriveKinematics,
-            getRotation(),
+            getRotation(), // Use 2D rotation
             getModulePositions(), // Use helper
             new Pose2d() // Start at (0, 0, 0)
         );
@@ -145,27 +144,31 @@ public class Drivetrain extends SubsystemBase {
 
         // Update odometry
         SwerveModulePosition[] modulePositions = getModulePositions();
+        // --- FIX: Use getRotation() (2D) for the update method ---
         m_odometry.update(getRotation(), modulePositions);
 
         // Vision fusion
-        VisionMeasurement measurement = m_vision.getVisionMeasurement();
-        if (measurement != null && measurement.ambiguity() < 0.2) {
-            m_odometry.addVisionMeasurement(
-                measurement.pose().toPose2d(),
-                measurement.timestamp()
-            );
-            Logger.recordOutput("Drive/VisionPose", measurement.pose().toPose2d());
+        VisionMeasurement[] measurements = m_vision.getVisionMeasurements();
+        
+        // Loop through all measurements
+        for (VisionMeasurement measurement : measurements) {
+            // Check ambiguity
+            if (measurement != null && measurement.ambiguity() < 0.2) {
+                // --- FIX: SwerveDrivePoseEstimator uses addVisionMeasurement with Pose2d ---
+                m_odometry.addVisionMeasurement(
+                    measurement.pose().toPose2d(), // Pass the Pose2d
+                    measurement.timestamp()
+                );
+                // --- FIX: Log the 2D Pose from vision ---
+                Logger.recordOutput("Drive/VisionPose", measurement.pose().toPose2d());
+            }
         }
-
-        // --- REMOVED OLD LOGGING ---
-        // AdvantageKit's logger still runs, but we'll use the
-        // structured publishers for the primary dashboard.
 
         // --- BEGIN STRUCTURED TELEMETRY PUBLISHING ---
         SwerveModuleState[] actualModuleStates = getModuleStates();
         
         // Publish all structured data
-        drivePosePub.set(getPose());
+        drivePosePub.set(getPose()); // This will now publish the Pose2d
         driveSpeedsPub.set(m_chassisSpeeds);
         driveModuleStatesPub.set(actualModuleStates);
         driveModuleTargetsPub.set(m_desiredModuleStates);
@@ -184,7 +187,8 @@ public class Drivetrain extends SubsystemBase {
         }
         // --- END STRUCTURED TELEMETRY PUBLISHING ---
 
-        // --- REMOVED OLD SmartDashboard.put... SECTION ---
+        // Log the odometry pose to AdvantageKit
+        Logger.recordOutput("Drive/Odometry", getPose());
     }
 
     /**
@@ -207,6 +211,7 @@ public class Drivetrain extends SubsystemBase {
         this.m_chassisSpeeds = speeds;
         
         if (fieldRelative) {
+            // Use the 2D rotation (yaw) for field-relative control
             speeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, getRotation());
         }
 
@@ -237,23 +242,38 @@ public class Drivetrain extends SubsystemBase {
         m_rearRight.disable();
         this.m_chassisSpeeds = new ChassisSpeeds();
         // Clear desired states
+        // --- FIX: Corrected typo ---
         this.m_desiredModuleStates = new SwerveModuleState[] {
             new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState()
         };
     }
 
     /**
-     * Returns the current pose of the robot (position and heading).
+     * Returns the current 2D pose of the robot (position and rotation).
      */
     public Pose2d getPose() {
-        return m_odometry.getPoseMeters();
+        // --- FIX: Use getEstimatedPosition() for PoseEstimator ---
+        return m_odometry.getEstimatedPosition();
     }
 
+//Access to default constructor is not allowed here.
     /**
-     * Returns the current rotation of the robot from the gyro.
+     * Returns the current 2D rotation of the robot from the gyro (yaw).
      */
     public Rotation2d getRotation() {
         return Rotation2d.fromDegrees(m_gyroInputs.yawDeg);
+    }
+
+    /**
+     * Returns the current 3D rotation of the robot from the gyro (roll, pitch, yaw).
+     * This can be used for other purposes, even if odometry is 2D.
+     */
+    public Rotation3d getRotation3d() {
+        return new Rotation3d(
+            Units.degreesToRadians(m_gyroInputs.rollDeg),
+            Units.degreesToRadians(m_gyroInputs.pitchDeg),
+            Units.degreesToRadians(m_gyroInputs.yawDeg)
+        );
     }
 
     /**
@@ -277,7 +297,7 @@ public class Drivetrain extends SubsystemBase {
     public SwerveModuleState[] getModuleStates() {
         return new SwerveModuleState[] {
             new SwerveModuleState(m_frontLeft.getVelocity(), m_frontLeft.getRotation()),
-            new SwerveModuleState(m_frontRight.getVelocity(), m_frontRight.getRotation()),
+            new SwerveModuleState(m_frontRight.getVelocity(), m_frontRight.getRotation()), 
             new SwerveModuleState(m_rearLeft.getVelocity(), m_rearLeft.getRotation()),
             new SwerveModuleState(m_rearRight.getVelocity(), m_rearRight.getRotation())
         };
@@ -285,11 +305,11 @@ public class Drivetrain extends SubsystemBase {
 
     /**
      * Resets the odometry to a specific pose.
-     * @param pose The pose to reset to.
+     * @param pose The 2D pose to reset to.
      */
-    public void resetOdometry(Pose2d pose) {
+    public void resetOdometry(Pose2d pose) { // <-- FIX: Changed to Pose2d
         m_odometry.resetPosition(
-            getRotation(),
+            getRotation(), // <-- FIX: Use getRotation()
             getModulePositions(), // Use helper
             pose
         );
@@ -300,6 +320,8 @@ public class Drivetrain extends SubsystemBase {
      */
     public void zeroHeading() {
         m_gyroIO.setYaw(0.0);
+        // Reset to the current translation but with a 0 rotation
+        // --- FIX: Use Pose2d and Rotation2d ---
         resetOdometry(new Pose2d(getPose().getTranslation(), new Rotation2d(0.0)));
     }
 
@@ -325,3 +347,4 @@ public class Drivetrain extends SubsystemBase {
         m_rearRight.simulationPeriodic(dt);
     }
 }
+

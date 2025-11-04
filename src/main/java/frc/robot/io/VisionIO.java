@@ -2,7 +2,7 @@ package frc.robot.io;
 
 import org.littletonrobotics.junction.AutoLog;
 import org.littletonrobotics.junction.LogTable;
-import org.littletonrobotics.junction.inputs.LoggableInputs; // <-- IMPORT THIS
+import org.littletonrobotics.junction.inputs.LoggableInputs; // CLEANUP: Removed comment
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -25,12 +25,12 @@ public interface VisionIO {
 
         // --- ADD THESE METHODS TO SATISFY THE INTERFACE ---
         @Override
-        public default void toLog(LogTable table) {
+        public void toLog(LogTable table) { // CLEANUP: Removed 'default' keyword
             // AdvantageKit's @AutoLog handles this automatically
         }
 
         @Override
-        public default void fromLog(LogTable table) {
+        public void fromLog(LogTable table) { // CLEANUP: Removed 'default' keyword
             // AdvantageKit's @AutoLog handles this automatically
         }
         // --- END OF ADDED METHODS ---

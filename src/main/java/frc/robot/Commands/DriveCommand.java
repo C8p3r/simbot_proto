@@ -20,9 +20,13 @@ public class DriveCommand extends Command {
     private final Supplier<Boolean> m_isFieldRelative;
 
     // Slew rate limiters to smooth joystick inputs
-    private final SlewRateLimiter m_xLimiter = new SlewRateLimiter(kMaxAngularSpeedRadiansPerSecond);
-    private final SlewRateLimiter m_yLimiter = new SlewRateLimiter(kMaxAngularSpeedRadiansPerSecond);
-    private final SlewRateLimiter m_rotLimiter = new SlewRateLimiter(kMaxAngularSpeedRadiansPerSecond);
+    // --- THIS IS THE FIX ---
+    // Use kDriveSlewRate for linear motion and kRotSlewRate for rotation.
+    private final SlewRateLimiter m_xLimiter = new SlewRateLimiter(kDriveSlewRate);
+    private final SlewRateLimiter m_yLimiter = new SlewRateLimiter(kDriveSlewRate);
+    private final SlewRateLimiter m_rotLimiter = new SlewRateLimiter(kRotSlewRate);
+    // --- END FIX ---
+
 
     /**
      * Creates a new DriveCommand.
@@ -63,10 +67,8 @@ public class DriveCommand extends Command {
         // Create ChassisSpeeds object
         ChassisSpeeds chassisSpeeds = new ChassisSpeeds(xSpeed, ySpeed, rotSpeed);
 
-        // --- THIS IS THE FIX ---
         // Pass the boolean supplier's value to the drive method
         m_drivetrain.drive(chassisSpeeds, m_isFieldRelative.get());
-        // --- END FIX ---
     }
 
     @Override
@@ -74,4 +76,3 @@ public class DriveCommand extends Command {
         m_drivetrain.stop();
     }
 }
-

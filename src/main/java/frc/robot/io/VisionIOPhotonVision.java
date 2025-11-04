@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.EstimatedRobotPose; // This import is correct
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -42,8 +43,8 @@ public class VisionIOPhotonVision implements VisionIO {
         var result = camera.getLatestResult();
         inputs.hasTargets = result.hasTargets();
         
-        // If we have no targets, or if the pose estimator hasn't been initialized, return early
-        if (!inputs.hasTargets || poseEstimator == null) {
+        // If pose estimator hasn't been initialized, return early
+        if (poseEstimator == null) {
             inputs.observationPoses = new Pose3d[] {};
             inputs.observationTimestamps = new double[] {};
             inputs.observationAmbiguities = new double[] {};
@@ -51,19 +52,17 @@ public class VisionIOPhotonVision implements VisionIO {
         }
 
         // Get the estimated robot pose
-        Optional<PhotonPoseEstimator.EstimatedPose> estimatedPose = poseEstimator.update();
+        Optional<EstimatedRobotPose> estimatedPose = poseEstimator.update(result);
         
         if (estimatedPose.isPresent()) {
             // Valid pose found
-            inputs.observationPoses = new Pose3d[] { estimatedPose.get().estimatedPose };
+            // --- FIX: Use .best, not .bestPose ---
+            inputs.observationPoses = new Pose3d[] { estimatedPose.get().best }; 
             inputs.observationTimestamps = new double[] { estimatedPose.get().timestampSeconds };
             
-            // Get ambiguity of the *best* target used for this pose
-            double bestAmbiguity = 9999.0;
-            if (result.getBestTarget() != null) {
-                bestAmbiguity = result.getBestTarget().getPoseAmbiguity();
-            }
-            inputs.observationAmbiguities = new double[] { bestAmbiguity };
+            // --- FIX: Use .ambiguity, not .multiTagAmbig ---
+            // This value is already the selected ambiguity (e.g., multi-tag or single-tag)
+            inputs.observationAmbiguities = new double[] { estimatedPose.get().ambiguity };
 
         } else {
             // No pose calculated
@@ -73,3 +72,4 @@ public class VisionIOPhotonVision implements VisionIO {
         }
     }
 }
+

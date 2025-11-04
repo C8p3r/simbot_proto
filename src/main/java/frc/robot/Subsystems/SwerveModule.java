@@ -57,11 +57,11 @@ public class SwerveModule extends SubsystemBase {
      */
     public void setDesiredState(SwerveModuleState desiredState) {
         // Optimize the state to minimize turning
-        // .optimize() modifies the 'desiredState' object in-place (returns void)
-        desiredState.optimize(getRotation());
+        // The static .optimize() method returns the new, optimized state.
+        SwerveModuleState optimizedState = SwerveModuleState.optimize(desiredState, getRotation());
         
         // Assign the now-optimized state to our class member
-        m_desiredState = desiredState;
+        m_desiredState = optimizedState;
 
         // Calculate feedforward voltage
         double ffVolts = m_driveFeedforward.calculate(m_desiredState.speedMetersPerSecond);
@@ -79,7 +79,7 @@ public class SwerveModule extends SubsystemBase {
 
     /** Returns the current position of the module. */
     public SwerveModulePosition getPosition() {
-        return new SwerveModulePosition(m_inputs.drivePositionMeters, Rotation2d.fromRadians(m_inputs.steerPositionRadians));
+        return new SwerveModulePosition(m_inputs.driveVelocityMetersPerSec, Rotation2d.fromRadians(m_inputs.steerPositionRadians));
     }
 
     /** Returns the current rotation of the module. */
