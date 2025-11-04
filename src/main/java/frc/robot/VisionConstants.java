@@ -1,8 +1,12 @@
 package frc.robot;
 
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 
 public final class VisionConstants {
@@ -32,5 +36,14 @@ public final class VisionConstants {
     //         new Translation3d(Units.inchesToMeters(-12.0), Units.inchesToMeters(0.0), Units.inchesToMeters(10.0)),
     //         new Rotation3d(0.0, 0.0, Units.degreesToRadians(180.0)) // Rotated 180 deg
     //     );
+    
+    // --- POSE ESTIMATION STANDARD DEVIATIONS ---
+    // These are ballpark values to start with. Tune these based on actual robot performance.
+    // Standard deviations (x, y, and theta) for single-tag poses. 
+    // These should be higher, as single-tag poses are less reliable.
+    public static final Matrix<N3, N1> kSingleTagStdDevs = VecBuilder.fill(0.8, 0.8, Units.degreesToRadians(30));
 
+    // Standard deviations (x, y, and theta) for multi-tag poses.
+    // These should be lower, as multi-tag poses are more reliable.
+    public static final Matrix<N3, N1> kMultiTagStdDevs = VecBuilder.fill(0.4, 0.4, Units.degreesToRadians(15));
 }

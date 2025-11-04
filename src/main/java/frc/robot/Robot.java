@@ -18,9 +18,8 @@ import frc.robot.io.SwerveModuleIO;
 import frc.robot.io.SwerveModuleIOSim;
 import frc.robot.io.SwerveModuleIOTalonFX;
 
-import frc.robot.io.VisionIO;
-import frc.robot.io.VisionIOPhotonVision;
-import frc.robot.io.VisionIOSim;
+// Import the Vision subsystem, not the IO interface
+import frc.robot.subsystems.Vision;
 
 /**
  * The main Robot class, which extends AdvantageKit's LoggedRobot.
@@ -65,7 +64,10 @@ public class Robot extends LoggedRobot {
         final SwerveModuleIO frModuleIO;
         final SwerveModuleIO rlModuleIO;
         final SwerveModuleIO rrModuleIO;
-        final VisionIO visionIO; // <-- ADD THIS
+        
+        // Vision is no longer an IO object, it's a full subsystem.
+        // We instantiate it directly here.
+        final Vision vision = new Vision();
 
         if (RobotBase.isReal()) {
             // Real robot IO
@@ -75,8 +77,6 @@ public class Robot extends LoggedRobot {
             rlModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kRearLeftDriveCanId, Constants.DriveConstants.kRearLeftSteerCanId);
             rrModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kRearRightDriveCanId, Constants.DriveConstants.kRearRightSteerCanId);
 
-            visionIO = new VisionIOPhotonVision(); // <-- ADD THIS
-
         } else {
             // Simulation IO
             gyroIO = new Pigeon2IOSim();
@@ -84,13 +84,11 @@ public class Robot extends LoggedRobot {
             frModuleIO = new SwerveModuleIOSim();
             rlModuleIO = new SwerveModuleIOSim();
             rrModuleIO = new SwerveModuleIOSim();
-
-            visionIO = new VisionIOSim(); // <-- ADD THIS
         }
 
         // --- THIS IS THE CORRECT INITIALIZATION ---
         // Instantiate RobotContainer. This must be done AFTER IO selection.
-        m_robotContainer = new RobotContainer(gyroIO, flModuleIO, frModuleIO, rlModuleIO, rrModuleIO, visionIO); // <-- PASS visionIO
+        m_robotContainer = new RobotContainer(gyroIO, flModuleIO, frModuleIO, rlModuleIO, rrModuleIO, vision); // <-- PASS vision subsystem
     }
 
     @Override
@@ -119,4 +117,3 @@ public class Robot extends LoggedRobot {
         CommandScheduler.getInstance().cancelAll();
     }
 }
-

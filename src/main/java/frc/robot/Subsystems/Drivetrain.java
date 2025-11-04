@@ -146,13 +146,16 @@ public class Drivetrain extends SubsystemBase {
         SwerveModulePosition[] modulePositions = getModulePositions();
         // --- FIX: Use getRotation() (2D) for the update method ---
         m_odometry.update(getRotation(), modulePositions);
+        
+        // The Vision subsystem's periodic method will be called by the Scheduler,
+        // which will update its internal state (including pose estimates).
 
         // Vision fusion
         VisionMeasurement[] measurements = m_vision.getVisionMeasurements();
         
         // Loop through all measurements
         for (VisionMeasurement measurement : measurements) {
-            // Check ambiguity
+            // Check ambiguity (lower is better)
             if (measurement != null && measurement.ambiguity() < 0.2) {
                 // --- FIX: SwerveDrivePoseEstimator uses addVisionMeasurement with Pose2d ---
                 m_odometry.addVisionMeasurement(
@@ -201,9 +204,9 @@ public class Drivetrain extends SubsystemBase {
         // --- SIMULATION SPEED MULTIPLIER ---
         if (RobotBase.isSimulation()) {
             speeds = new ChassisSpeeds(
-                speeds.vxMetersPerSecond , // Increased from 5.0
-                speeds.vyMetersPerSecond , // Increased from 5.0
-                speeds.omegaRadiansPerSecond  // Increased from 5.0
+                speeds.vxMetersPerSecond , 
+                speeds.vyMetersPerSecond , 
+                speeds.omegaRadiansPerSecond
             );
         }
         // --- END SIMULATION SPEED MULTIPLIER ---
@@ -256,7 +259,6 @@ public class Drivetrain extends SubsystemBase {
         return m_odometry.getEstimatedPosition();
     }
 
-//Access to default constructor is not allowed here.
     /**
      * Returns the current 2D rotation of the robot from the gyro (yaw).
      */
@@ -329,7 +331,8 @@ public class Drivetrain extends SubsystemBase {
     public void simulationPeriodic() {
         // --- ADDED SIMULATION dt CALCULATION ---
         double now = Timer.getFPGATimestamp();
-        double dt = (m_lastSimTimestamp == 0) ? 0.0 : now - m_lastSimTimestamp;
+        double dt = (m_lastSimTimestamp == 0) ? 0.02 : now - m_lastSimTimestamp;
+        if (dt == 0.0) dt = 0.02; // Avoid 0 dt on first frame
         m_lastSimTimestamp = now;
         // --- END ADDED SECTION ---
 
@@ -345,6 +348,8 @@ public class Drivetrain extends SubsystemBase {
         m_frontRight.simulationPeriodic(dt);
         m_rearLeft.simulationPeriodic(dt);
         m_rearRight.simulationPeriodic(dt);
+
+        // Update vision simulation
+        m_vision.simulationPeriodic(getPose());
     }
 }
-
