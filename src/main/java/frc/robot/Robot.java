@@ -45,46 +45,6 @@ public class Robot extends LoggedRobot {
         // (This part remains the same)
         Logger.recordMetadata("ProjectName", "SwerveDriveAK");
         
-        if (isReal() && Constants.LOG_TO_RERUN) {
-            Logger.addDataReceiver(new WPILOGWriter("/home/lvuser/logs"));
-            Logger.addDataReceiver(new NT4Publisher());
-        } else if (isSimulation()) {
-            Logger.addDataReceiver(new NT4Publisher());
-        }
-        if (Constants.REPLAY_LOGS) {
-            String path = LogFileUtil.findReplayLog();
-            Logger.setReplaySource(new WPILOGReader(path));
-            Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(path, "_sim")));
-        }
-        Logger.start(); // Start logging!
-
-        // --- IO Implementation Selection ---
-        final GyroIO gyroIO;
-        final SwerveModuleIO flModuleIO;
-        final SwerveModuleIO frModuleIO;
-        final SwerveModuleIO rlModuleIO;
-        final SwerveModuleIO rrModuleIO;
-        
-        // Vision is no longer an IO object, it's a full subsystem.
-        // We instantiate it directly here.
-        final Vision vision = new Vision();
-
-        if (RobotBase.isReal()) {
-            // Real robot IO
-            gyroIO = new Pigeon2IO();
-            flModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kFrontLeftDriveCanId, Constants.DriveConstants.kFrontLeftSteerCanId);
-            frModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kFrontRightDriveCanId, Constants.DriveConstants.kFrontRightSteerCanId);
-            rlModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kRearLeftDriveCanId, Constants.DriveConstants.kRearLeftSteerCanId);
-            rrModuleIO = new SwerveModuleIOTalonFX(Constants.DriveConstants.kRearRightDriveCanId, Constants.DriveConstants.kRearRightSteerCanId);
-
-        } else {
-            // Simulation IO
-            gyroIO = new Pigeon2IOSim();
-            flModuleIO = new SwerveModuleIOSim();
-            frModuleIO = new SwerveModuleIOSim();
-            rlModuleIO = new SwerveModuleIOSim();
-            rrModuleIO = new SwerveModuleIOSim();
-        }
 
         // --- THIS IS THE CORRECT INITIALIZATION ---
         // Instantiate RobotContainer. This must be done AFTER IO selection.
