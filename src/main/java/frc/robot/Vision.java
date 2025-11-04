@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package frc.robot.subsystems;
+package frc.robot;
 
 import static frc.robot.Constants.Vision.*;
 

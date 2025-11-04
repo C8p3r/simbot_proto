@@ -1,95 +1,142 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) PhotonVision
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package frc.robot;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-/**
- * The Constants class is a repository for all configuration and tuning values.
- */
-public final class Constants {
+public class Constants {
+    public static class Vision {
+        public static final String kCameraName = "YOUR CAMERA NAME";
+        // Cam mounted facing forward, half a meter forward of center, half a meter up from center.
+        public static final Transform3d kRobotToCam =
+                new Transform3d(new Translation3d(0.5, 0.0, 0.5), new Rotation3d(0, 0, 0));
 
-    // --- LOGGING/ADVANTAGEKIT CONSTANTS ---
-    public static final boolean LOG_TO_RERUN = true; // Set to true to log to RERUN file
-    public static final boolean REPLAY_LOGS = false; // Set to true to replay logs instead of running live
+        // The layout of the AprilTags on the field
+        public static final AprilTagFieldLayout kTagLayout =
+                AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-    // --- DRIVETRAIN CONSTANTS ---
-    public static final class DriveConstants {
-        // CAN IDs
-        public static final int kFrontLeftDriveCanId = 1;
-        public static final int kFrontLeftSteerCanId = 5;
-
-        public static final int kFrontRightDriveCanId = 2;
-        public static final int kFrontRightSteerCanId = 6;
-
-        public static final int kRearLeftDriveCanId = 3;
-        public static final int kRearLeftSteerCanId = 7;
-
-        public static final int kRearRightDriveCanId = 4;
-        public static final int kRearRightSteerCanId = 8;
-        
-        public static final int kPigeonCanId = 9; 
-
-        // Chassis dimensions: distance from the center of the robot to the wheel center (in meters)
-        public static final double kTrackWidth = Units.inchesToMeters(21.5);
-        public static final double kWheelBase = Units.inchesToMeters(21.5);
-
-        // Define the locations of the swerve modules relative to the robot's center (in meters)
-        public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
-            new Translation2d(kWheelBase / 2, kTrackWidth / 2),     // Front Left
-            new Translation2d(kWheelBase / 2, -kTrackWidth / 2),    // Front Right
-            new Translation2d(-kWheelBase / 2, kTrackWidth / 2),    // Rear Left
-            new Translation2d(-kWheelBase / 2, -kTrackWidth / 2)    // Rear Right
-        );
-
-        // Max speeds (for simulation/testing)
-        public static final double kMaxSpeedMetersPerSecond = 3.92; 
-        public static final double kMaxAngularSpeedRadiansPerSecond = 6.0;
-        
-        // Feedforward gains for drive motor (Tuning required!)
-        public static final double kDriveKs = 4; // Volts
-        public static final double kDriveKv = 0.5; // Volts * seconds / meter
-
-        // PID Constants for the Drive Motor Velocity Control (Tuning required!)
-        public static final double kDriveP = 0.01;
-        public static final double kDriveI = 0.0;
-        public static final double kDriveD = 0.0;
-
-        // PID Constants for the Steering Motor Position Control (Tuning required!)
-        public static final double kSteerP = 10;
-        public static final double kSteerI = 0.0;
-        public static final double kSteerD = 0.0;
-        
-        // Gear ratios
-        public static final double kSteerMotorGearRatio = 12.8; 
-        public static final double kDriveMotorGearRatio = 8.14;
-
-        // --- NEW SIMULATION CONSTANTS ---
-        // Moment of Inertia (J) for simulation, in kg*m^2
-        // This is a placeholder value; tune this for more accurate sim
-        public static final double kDriveMotorInertia = 0.00001;
-        public static final double kSteerMotorInertia = 0.00001;
-        // --- END NEW CONSTANTS ---
-
-        // Conversion factors to convert from raw sensor units (rotations) to meters or radians
-        // The drive motor conversion needs to account for the wheel circumference
-        public static final double kWheelDiameterMeters = Units.inchesToMeters(4.0);
-        public static final double kDriveConversionFactor = (kWheelDiameterMeters * Math.PI) / kDriveMotorGearRatio; 
-        // The steer conversion is simply 2*Pi / Gear Ratio
-        public static final double kSteerConversionFactor = (2 * Math.PI) / kSteerMotorGearRatio;
+        // The standard deviations of our vision estimated poses, which affect correction rate
+        // (Fake values. Experiment and determine estimation noise on an actual robot.)
+        public static final Matrix<N3, N1> kSingleTagStdDevs = VecBuilder.fill(4, 4, 8);
+        public static final Matrix<N3, N1> kMultiTagStdDevs = VecBuilder.fill(0.5, 0.5, 1);
     }
 
-    // --- JOYSTICK/CONTROLLER CONSTANTS ---
-    public static final class OIConstants {
-        public static final int kDriverControllerPort = 0;
-        public static final double kDriveDeadband = 0.1;
+    public static class Swerve {
+        // Physical properties
+        public static final double kTrackWidth = Units.inchesToMeters(18.5);
+        public static final double kTrackLength = Units.inchesToMeters(18.5);
+        public static final double kRobotWidth = Units.inchesToMeters(25 + 3.25 * 2);
+        public static final double kRobotLength = Units.inchesToMeters(25 + 3.25 * 2);
+        public static final double kMaxLinearSpeed = Units.feetToMeters(15.5);
+        public static final double kMaxAngularSpeed = Units.rotationsToRadians(2);
+        public static final double kWheelDiameter = Units.inchesToMeters(4);
+        public static final double kWheelCircumference = kWheelDiameter * Math.PI;
 
-        // --- NEW: Slew Rate Constants ---
-        // (Units are "percent of full speed per second")
-        // Tune these to get the "feel" you want
-        public static final double kDriveSlewRate = 3; // 3.0 means it takes 0.33s to get from 0 to full speed
-        public static final double kRotSlewRate = 1;   // 3.0 means it takes 0.33s to get from 0 to full rotation
+        public static final double kDriveGearRatio = 6.75; // 6.75:1 SDS MK4 L2 ratio
+        public static final double kSteerGearRatio = 12.8; // 12.8:1
+
+        public static final double kDriveDistPerPulse = kWheelCircumference / 1024 / kDriveGearRatio;
+        public static final double kSteerRadPerPulse = 2 * Math.PI / 1024;
+
+        public enum ModuleConstants {
+            FL( // Front left
+                    1, 0, 0, 1, 1, 2, 3, 0, kTrackLength / 2, kTrackWidth / 2),
+            FR( // Front Right
+                    2, 2, 4, 5, 3, 6, 7, 0, kTrackLength / 2, -kTrackWidth / 2),
+            BL( // Back Left
+                    3, 4, 8, 9, 5, 10, 11, 0, -kTrackLength / 2, kTrackWidth / 2),
+            BR( // Back Right
+                    4, 6, 12, 13, 7, 14, 15, 0, -kTrackLength / 2, -kTrackWidth / 2);
+
+            public final int moduleNum;
+            public final int driveMotorID;
+            public final int driveEncoderA;
+            public final int driveEncoderB;
+            public final int steerMotorID;
+            public final int steerEncoderA;
+            public final int steerEncoderB;
+            public final double angleOffset;
+            public final Translation2d centerOffset;
+
+            private ModuleConstants(
+                    int moduleNum,
+                    int driveMotorID,
+                    int driveEncoderA,
+                    int driveEncoderB,
+                    int steerMotorID,
+                    int steerEncoderA,
+                    int steerEncoderB,
+                    double angleOffset,
+                    double xOffset,
+                    double yOffset) {
+                this.moduleNum = moduleNum;
+                this.driveMotorID = driveMotorID;
+                this.driveEncoderA = driveEncoderA;
+                this.driveEncoderB = driveEncoderB;
+                this.steerMotorID = steerMotorID;
+                this.steerEncoderA = steerEncoderA;
+                this.steerEncoderB = steerEncoderB;
+                this.angleOffset = angleOffset;
+                centerOffset = new Translation2d(xOffset, yOffset);
+            }
+        }
+
+        // Feedforward
+        // Linear drive feed forward
+        public static final SimpleMotorFeedforward kDriveFF =
+                new SimpleMotorFeedforward( // real
+                        0.25, // Voltage to break static friction
+                        2.5, // Volts per meter per second
+                        0.3 // Volts per meter per second squared
+                        );
+        // Steer feed forward
+        public static final SimpleMotorFeedforward kSteerFF =
+                new SimpleMotorFeedforward( // real
+                        0.5, // Voltage to break static friction
+                        0.25, // Volts per radian per second
+                        0.01 // Volts per radian per second squared
+                        );
+
+        // PID
+        public static final double kDriveKP = 1;
+        public static final double kDriveKI = 0;
+        public static final double kDriveKD = 0;
+
+        public static final double kSteerKP = 20;
+        public static final double kSteerKI = 0;
+        public static final double kSteerKD = 0.25;
     }
 }
-
